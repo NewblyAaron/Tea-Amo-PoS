@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using TeaAmoWFA.Forms;
 
@@ -29,49 +30,44 @@ namespace TeaAmoWFA
             SalesTable.Rows.Clear();
 
             // Get the transaction history
-            var reader = Db.ExecuteReader($"SELECT * FROM `teaamopos`.`transaction_history` WHERE `date` = '{DateTime.Now.ToString("yyyy-MM-dd")}'");
-            string date;
-            DateTime datetime;
+            var reader = Db.ExecuteReader(
+                "SELECT `date`, `transaction_history`.`id`, SUM(`qty_bought`) AS `units_sold`, `total_price` " +
+                "FROM `teaamopos`.`transaction_history` " +
+                "INNER JOIN `teaamopos`.`transaction_history_items` ON `teaamopos`.`transaction_history`.`id` = `teaamopos`.`transaction_history_items`.`id` " +
+                $"WHERE YEARWEEK(`date`, 1) = YEARWEEK('{DateTime.Now.ToString("yyyy-MM-dd")}', 1) " +
+                "GROUP BY `transaction_history`.`id`"
+                );
 
             while (reader.Read())
             {
-                datetime = (DateTime)reader[1];
-                date = datetime.ToString("dddd, dd MMMM yyyy");
+                DateTime datetime = (DateTime) reader[0];
+                string date = datetime.ToString("dddd, dd MMMM yyyy");
 
-                SalesTable.Rows.Add(reader[0], date, "PHP " + reader[2].ToString());
+                SalesTable.Rows.Add(date, reader[1], reader[2], "PHP " + reader[3]);
             }
 
             reader.Close();
 
-            GetUnitsAndIncome();
+            
+            if (!(SalesTable.Rows.Count <= 0))
+            {
+                GetUnitsAndIncome();
+            }
         }
 
         private void GetUnitsAndIncome()
         {
-            try
-            {
-                // Get values
-                int UnitsSoldToday = Convert.ToInt32(Db.ExecuteScalar(
-                    "SELECT SUM(qty_bought) " +
-                    "FROM `teaamopos`.`transaction_history_items` " +
-                    "INNER JOIN `teaamopos`.`transaction_history` ON transaction_history_items.id = transaction_history.id " +
-                    $"WHERE `date` = '{DateTime.Now.ToString("yyyy-MM-dd")}'"));
-                double IncomeToday = Convert.ToDouble(Db.ExecuteScalar(
-                    "SELECT SUM(total_price) " +
-                    "FROM `teaamopos`.`transaction_history_items` " +
-                    "INNER JOIN `teaamopos`.`transaction_history` ON transaction_history_items.id = transaction_history.id " +
-                    $"WHERE `date` = '{DateTime.Now.ToString("yyyy-MM-dd")}'"));
+            int units = 0;
+            double income = 0;
 
-                // Put values into textboxes
-                SoldUnitsBox.Text = UnitsSoldToday.ToString();
-                TotalIncomeBox.Text = "PHP " + IncomeToday.ToString();
-            }
-            // This only catches if the database returns nothing.
-            catch (InvalidCastException)
+            foreach (DataGridViewRow row in SalesTable.Rows)
             {
-                SoldUnitsBox.Text = "0";
-                TotalIncomeBox.Text = "PHP 0";
+                units += Convert.ToInt32(row.Cells[2].Value.ToString());
+                income += Convert.ToInt32(Regex.Match(row.Cells[3].Value.ToString(), @"-?\d+").Value);
             }
+
+            // Create a row for totals
+            SalesTable.Rows.Add("", "TOTAL", units.ToString(), "PHP " + income.ToString());
         }
 
         private void TransactionButton_Click(object sender, EventArgs e)
@@ -84,9 +80,16 @@ namespace TeaAmoWFA
 
         private void SalesTable_DoubleClick(object sender, EventArgs e)
         {
+            string selectedItem = SalesTable.SelectedCells[1].Value.ToString();
+
             if (SalesTable.SelectedCells.Count > 0)
             {
-                int id = Convert.ToInt32(SalesTable.SelectedCells[0].Value.ToString());
+                if (selectedItem == "TOTAL")
+                {
+                    return;
+                }
+
+                int id = Convert.ToInt32(selectedItem);
                 TransactionDetailsForm transactionDetailsForm = new TransactionDetailsForm(id);
                 transactionDetailsForm.ShowDialog();
             }

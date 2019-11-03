@@ -8,6 +8,8 @@ namespace TeaAmoWFA
     {
         private readonly Database Db = new Database();
 
+        int attempt = 0;
+
         public LoginForm()
         {
             InitializeComponent();
@@ -27,6 +29,12 @@ namespace TeaAmoWFA
             else
             {
                 new Msg().Error("Username or password incorrect.");
+
+                if (++attempt >= 3)
+                {
+                    new Msg().Warning("Intruder alert! This application will now exit.");
+                    Application.Exit();
+                }
             }
         }
     }

@@ -58,6 +58,7 @@
             this.TransactionDetailsList.ReadOnly = true;
             this.TransactionDetailsList.RowHeadersVisible = false;
             this.TransactionDetailsList.RowHeadersWidthSizeMode = System.Windows.Forms.DataGridViewRowHeadersWidthSizeMode.DisableResizing;
+            this.TransactionDetailsList.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.TransactionDetailsList.Size = new System.Drawing.Size(776, 327);
             this.TransactionDetailsList.TabIndex = 0;
             // 

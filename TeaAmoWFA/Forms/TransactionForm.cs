@@ -33,6 +33,7 @@ namespace TeaAmoWFA
             if (input == DialogResult.Yes)
             {
                 ClearButton.Text = "Clear";
+                PriceLabel.Text = "Total";
 
                 OrderList.Rows.Clear();
                 UnitsBox.Clear();
@@ -178,9 +179,14 @@ namespace TeaAmoWFA
                     "INSERT INTO `teaamopos`.`transaction_history_items`(id, item_name, qty_bought, subtotal) " +
                     $"VALUES ({TransactionCodeBox.Text}, '{row.Cells[1].Value.ToString()}', {row.Cells[2].Value.ToString()}, {Regex.Match(row.Cells[4].Value.ToString(), @"-?\d+").Value})"
                     );
+
+                Db.ExecuteNonQuery(
+                    "UPDATE `teaamoinv`.`dbo.items` " +
+                    $"SET stock = stock - {row.Cells[2].Value.ToString()} " +
+                    $"WHERE name = '{row.Cells[1].Value.ToString()}'"
+                    );
             }
         }
-
         public bool GetSelectedProduct(DataGridViewRow selectedRow)
         {
             string id = selectedRow.Cells[0].Value.ToString();
